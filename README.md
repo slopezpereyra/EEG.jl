@@ -42,7 +42,7 @@ psd = PSD(signal, eeg.fs, eeg.fs * 3,0.5)
 plot(psd.freq, pow2db.(psd.spectrum), xlab="Frequency (Hz)", ylab="PSD (dB)", legend=false)
 ```
 
-![Image]("imgs/psd.png")
+![Image]("/imgs/psd.png")
 
 To do: 
 
