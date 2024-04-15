@@ -74,7 +74,7 @@ function epoch(eeg::EEG, n::Integer, m ::Integer, channel::String)
     signal[bounds[1]:bounds[2]]
 end
 
-function time(eeg::EEG, s::AbstractFloat, e::AbstractFloat)
+function time(eeg::EEG, s::Union{ AbstractFloat, Integer }, e::Union{ AbstractFloat, Integer })
     """Generates time domain of an EEG signal from second `s` to second `e`."""
     step = 1/eeg.fs
     return [ i for i in (s+step):step:e ]
@@ -122,3 +122,19 @@ function get_stage(eeg::EEG, channel::String, stages::Vector)
     eeg.signals[channel][indexes]
 end
 
+function filter!(eeg::EEG, channel::String, digfilter, cut_off)
+    eeg.signals[channel] = filt(digitalfilter(digfilter(cut_off, fs=eeg.fs), Butterworth(4)), eeg.signals[channel])
+end
+
+function filter!(eeg::EEG, channels::Vector{<:String}, digfilter, cut_off)
+
+    for chan in channels 
+        eeg.signals[chan] = filt(digitalfilter(digfilter(cut_off, eeg.fs), Butterworth(4)), eeg.signals[chan])
+    end
+end
+
+function filter!(eeg::EEG, digfilter, cut_off)
+    for chan in keys(eeg.signals)
+        eeg.signals[chan] = filt(digitalfilter(digfilter(cut_off, eeg.fs), Butterworth(4)), eeg.signals[chan])
+    end
+end
