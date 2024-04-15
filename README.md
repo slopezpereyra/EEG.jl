@@ -33,6 +33,7 @@ p = plot_spectrogram(S, 30.0, 1, :inferno) # Color scheme inferno is better for 
 ```
 
 ![Image](imgs/spetrogram_hplot.png) 
+
 The power spectrum is easily computed and easily plotted. It is easy to set Welch's method, Barlett's method, 
 or direct (no segmentation) PSD estimation. In this case we use Welch's method with 3 second windows and $0.5$ overlap.
 
