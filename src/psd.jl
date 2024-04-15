@@ -175,15 +175,15 @@ struct Spectrogram
     end
 end
 
-function plot_spectrogram(spec::Spectrogram, freq_lim::AbstractFloat = 30.0, type::Int=1)
+function plot_spectrogram(spec::Spectrogram, freq_lim::AbstractFloat = 30.0, type::Int=1, color = :hnipy_spectral)
 
     if type == 1
-        return(heatmap(spec.time, spec.freq, spec.spectrums', ylims=(0, freq_lim)))
+        return(heatmap(spec.time, spec.freq, spec.spectrums', ylims=(0, freq_lim), color = color))
     end
 
     if type == 2
         return(surface(spec.time, spec.freq, spec.spectrums', ylims=(0, freq_lim), 
-        xlabel="Time", ylabel="Frequency (Hz)", zlabel="PSD (dB)", color = :viridis))
+        xlabel="Time", ylabel="Frequency (Hz)", zlabel="PSD (dB)", color = color))
     end 
     throw(ArgumentError("The plot `type` argument must be either 1 (for heatmap) or 2 (for a surface plot)."))
 end
