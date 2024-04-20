@@ -10,7 +10,7 @@ emphasis on methodological transparency. Current features:
 - EEG Computational Toolkit
     - Loading EEG data
     - EEG visualization
-    - Sleep stage handling
+    - Sleep stage handling and NREM period detection
     - Power spectral analysis
     - Spindle detection algorithms
 
@@ -111,6 +111,23 @@ julia> psd.formula
 
 ![Image](imgs/psd.png) 
 
+### Signal filtering 
+
+Our filtering functions are simply wrappers around the `DSP.jl` package 
+and are very easy to use. The dispatches of the `filter!` function are:
+
+```julia
+filter!(eeg::EEG, channel::String, digfilter, cut_off)
+
+filter!(eeg::EEG, channels::Vector{<:String}, digfilter, cut_off)
+
+filter!(eeg::EEG, digfilter, cut_off)
+```
+
+If no channel is given, all EEG signals are filtered. For example,
+`filter!(eeg, Lowpass, 1)` applies a low-pass filter with cut-off frequency
+$1$Hz to all EEG signals.
+
 ### Spindle detection 
 
 This package implements two spindle detection algorithms discussed in [O'Reilly
@@ -155,3 +172,52 @@ probability---though it should be clear that $RSP$ is not a probability itself.
 The rejection threshold recommended in the original paper is $\lambda = 0.22$.
 
 The corresponding Julia function is ```relative_spindle_power(x::Vector{<:AbstractFloat}, fs::Integer)```.
+
+### NREM Period Detection
+
+Following [Feinberg & Floyed](https://pubmed.ncbi.nlm.nih.gov/220659/) and
+Dijk, a NREM period is a succession of epochs satisfying the following two conditions:
+
+- It starts with at least 15 minutes of stages 2, 3 or 4.
+- It ends with either $a.$ at least 5 minutes of REM or $b.$ wakefulness. 
+
+Given a succession of stages $s_1, \ldots, s_n$, with $s_i$ the sleep stage of
+the $i$th epoch, an algorithm that finds the pattern above by iterating over a
+vector is cumbersome. But one may define the alphabet $\Sigma = \{1, 2, 3, 4,
+5, 6\}$, where $1, \ldots, 4$ denote the homonimous sleep stages, $5$
+denotes REM and $6$ denotes wakefulness. Then the succession $s_1, \ldots, s_n$
+may be treated as a word $\alpha \in \Sigma^{*}$ of the form 
+
+$$
+\alpha = \psi_1 \beta_1 \psi_2 \beta_2 \ldots \psi_k\beta_k \psi_{k+1}
+$$
+
+where $\psi_i$ is an arbitrary word and
+
+$$
+\beta_i = \varphi (5^M5^* | 6)
+$$
+
+with $\varphi \in \{ w \in \{2, 3, 4\}^+ : |w| \geq N \}$, $N$ the minimum
+duration imposed for NREM periods, $M$ the minimum duration imposed for ending
+REM periods. Thus, the problem of finding the $k$ underlying NREM periods 
+in a series of sleep stages becomes the problem of finding the $k$ substrings
+$\beta_1, \ldots, \beta_k$ of $\alpha$. This problem is trivial from an 
+implementation perspective, since programming languages include regular expressions 
+natively.
+
+
+Subtleties, such as not imposing a minimum duration to the ending REM period 
+of the first NREM period, can easily be adapted into the regular expression of each $\beta_i$.
+
+
+
+
+
+
+
+
+
+
+
+
