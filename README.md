@@ -183,8 +183,8 @@ Dijk, a NREM period is a succession of epochs satisfying the following two condi
 
 Given a succession of stages $s_1, \ldots, s_n$, with $s_i$ the sleep stage of
 the $i$th epoch, an algorithm that finds the pattern above by iterating over a
-vector is cumbersome. But one may define the alphabet $\Sigma = \{1, 2, 3, 4,
-5, 6\}$, where $1, \ldots, 4$ denote the homonimous sleep stages, $5$
+vector is cumbersome. But one may define the alphabet $\Sigma = \\{1, 2, 3, 4,
+5, 6\\}$, where $1, \ldots, 4$ denote the homonimous sleep stages, $5$
 denotes REM and $6$ denotes wakefulness. Then the succession $s_1, \ldots, s_n$
 may be treated as a word $\alpha \in \Sigma^{*}$ of the form 
 
@@ -198,7 +198,7 @@ $$
 \beta_i = \varphi (5^M5^* | 6)
 $$
 
-with $\varphi \in \{ w \in \{2, 3, 4\}^+ : |w| \geq N \}$, $N$ the minimum
+with $\varphi \in \\{ w \in \\{2, 3, 4\\}^+ : |w| \geq N \\}$, $N$ the minimum
 duration imposed for NREM periods, $M$ the minimum duration imposed for ending
 REM periods. Thus, the problem of finding the $k$ underlying NREM periods 
 in a series of sleep stages becomes the problem of finding the $k$ substrings
