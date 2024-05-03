@@ -107,7 +107,7 @@ end
        freq::Vector{<:AbstractFloat}: 
             Frequency range of the spectrum
        spectrum::Vector{<:AbstractFloat}
-            Estimated spectral density
+            Estimated spectral density in dB.
        method::String
             Estimation method used 
        formula::String
@@ -133,7 +133,7 @@ struct PSD
     method::String
     formula::String
 
-    function PSD(x::Vector{<:AbstractFloat}, sampling_rate::Integer, pad::Integer=0)
+    function PSD(x::Vector{<:AbstractFloat}, fs::Integer, pad::Integer=0)
         N = length(x)
         hann = hanning(N) # Hanning window
         x = x .* hann
@@ -142,10 +142,11 @@ struct PSD
         end
         ft = abs2.(fft(x))
         ft = ft[1:(div(N, 2)+1)] # Make one sided
-        freq = [i for i in 0:(length(ft)-1)] .* sampling_rate / N
-        normalization = 2 / (sum(hann .^ 2))
-        spectrum = ft * normalization
-        new(freq, spectrum, "Direct (no segmentation)", "2|H(f)|² / ∑ wᵢ²  with  w₁, …, wₗ a Hanning window")
+        freq = [i for i in 0:(length(ft)-1)] .* fs / N
+        normalization = 1 / (sum(hann .^ 2) * fs)
+        spectrum = 2* ft * normalization
+        spectrum = pow2db.(spectrum)
+        new(freq, spectrum, "Direct (no segmentation)", "2|H(f)|² / ( ∑ wᵢ² * fₛ )  with  w₁, …, wₗ a Hanning window")
     end
 
     function PSD(x::Vector{<:AbstractFloat}, fs::Int, L::Int, overlap::Union{<:AbstractFloat,Integer}, normalization::Union{<:AbstractFloat,Integer}=1,
@@ -161,7 +162,7 @@ struct PSD
         end
 
         method = overlap > 0 ? "Welch's method" : "Barlett's method"
-        formula = "1/(M * normalization) ∑ ᵢᴹ [ 2|Hᵢ(f)|² / ∑  wᵢ² ]  where w₁, …, wₗ a Hanning window, M the number of segments, and Hᵢ(f) the FFT of the ith segment of the signal. "
+        formula = "1/(M * normalization) ∑ ᵢᴹ [ 2|Hᵢ(f)|² / ( fₛ ∑  wᵢ² ) ]  where w₁, …, wₗ a Hanning window, M the number of segments, and Hᵢ(f) the FFT of the ith segment of the signal. "
 
         function H(signal::Vector, window::Vector, seg_length::Integer)
             signal = signal .* window
@@ -170,13 +171,14 @@ struct PSD
             end
             ft = abs2.(fft(signal))
             ft = ft[1:(div(seg_length, 2)+1)] # One sided
-            return 2 .* ft ./ sum(window .^ 2)
+            return 2 .* ft ./ ( sum(window .^ 2) * fs)
         end
 
         hann = hanning(L)
         segs = overlaps(x, L, overlap)
         M = length(segs)
         w = sum(map(x -> H(x, hann, L), segs)) ./ (M * normalization)   # Hans uses denominator 2 * M * length(segs[1])
+        w = pow2db.(w)
         freq = [i for i in 0:(div(L, 2))] .* fs / L
         new(freq, w, method, formula)
     end
@@ -230,7 +232,7 @@ struct Spectrogram
         segs = overlaps(signal, segment_length, overlap)
         psds = map(x -> PSD(x, fs, inner_window_length, inner_overlap, normalization, pad), segs)
         freq = psds[1].freq
-        spectrums = map(x -> pow2db.(x.spectrum), psds)
+        spectrums = [psd.spectrum for psd in psds]
 
         spectrogram_data = zeros(length(spectrums), length(freq))
         for i in 1:length(spectrums)
@@ -315,10 +317,9 @@ end
         `lower::AbstractFloat` : The (closed) lower bound of the frequency range.
         `upper::AbstractFloat` : The (closed) upper bound of the frequency range.
 """
-function freq_band(psd::PSD, lower::AbstractFloat, upper::AbstractFloat)
-    li = findlast(x -> x <= lower, psd.freq)
-    ui = findlast(x -> x <= upper, psd.freq)
-    psd.spectrum[li:ui]
+function freq_band(spec::Union{PSD, AmplitudeSpectrum}, lower::AbstractFloat, upper::AbstractFloat)
+    indexes = findall(x -> x >= lower && x <= upper, spec.freq)
+    spec.spectrum[indexes]
 end
 
 
@@ -335,9 +336,8 @@ end
 """
 function freq_band(spec::Spectrogram, lower::AbstractFloat, upper::AbstractFloat, window::Integer)
     spectrum = spec.spectrums[window, :]
-    li = findlast(x -> x <= lower, spec.freq)
-    ui = findlast(x -> x <= upper, spec.freq)
-    spectrum[li:ui]
+    indexes = findall(x -> x >= lower && x <= upper, spec.freq)
+    spectrum[indexes]
 end
 
 """
@@ -352,8 +352,7 @@ end
 """
 function freq_band(spec::Spectrogram, lower::AbstractFloat, upper::AbstractFloat)
     spectrum = spec.spectrums
-    li = findlast(x -> x <= lower, spec.freq)
-    ui = findlast(x -> x <= upper, spec.freq)
-    spectrum[:, li:ui]
+    indexes = findall(x -> x >= lower && x <= upper, spec.freq)
+    spectrum[:, indexes]
 end
 
