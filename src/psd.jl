@@ -241,6 +241,23 @@ struct Spectrogram
 
         new(1:length(spectrums), freq, spectrogram_data, segment_length)
     end
+
+    # If a signal is not given, but a vector of segments (e.g. a list of epochs).
+    function Spectrogram(segs, fs::Integer, segment_length::Integer, overlap::AbstractFloat,
+                         normalization::Union{AbstractFloat, Integer} = 1, 
+                         pad::Integer = 0)
+
+        psds = map(x -> PSD(x, fs, segment_length, overlap, normalization, pad), segs)
+        freq = psds[1].freq
+        spectrums = [psd.spectrum for psd in psds]
+
+        spectrogram_data = zeros(length(spectrums), length(freq))
+        for i in 1:length(spectrums)
+            spectrogram_data[i, :] = spectrums[i]
+        end
+
+        new(1:length(spectrums), freq, spectrogram_data, segment_length)
+    end
 end
 
 

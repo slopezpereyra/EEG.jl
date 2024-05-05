@@ -144,9 +144,9 @@ average amplitude in the low alpha and theta frequencies, which we call
 $\alpha_{mean}, \theta_{mean}$, and $c.$ the maximum alpha amplitude
 $\alpha_{max}$, are computed. The sigma index is defind to be 
 
-$$f(S_{max}, \alpha_{mean}, \beta_{mean}) = \begin{cases} 
+$$f(S_{max}, \alpha_{mean}, \phi_{mean}) = \begin{cases} 
 0 & \alpha_{max} > S_{max} \\ 
-\frac{2S_{max}}{\alpha_{mean} + \beta_{mean} } & otherwise
+\frac{2S_{max}}{\alpha_{mean} + \phi_{mean} } & otherwise
 \end{cases}$$
 
 Higher values are indicative of a higher spindle probability. The rejection
@@ -166,7 +166,7 @@ $$RSP(t) = \frac{\int_{11}^{16} S(t, f) df}{\int_{0.5}^{40} S(t, f) df}$$
 
 This definition is more intelligible than the that of the sigma index, insofar
 as it represents the ratio of the total power in the spindle band with respect
-to the total power in the delta-theta-alpha-beta frequency range. It is evident
+to the total power in the delta-theta-alpha-phi frequency range. It is evident
 that $0 \leq RSP \leq 1$. Higher values are indicative of a higher spindle
 probability---though it should be clear that $RSP$ is not a probability itself.
 The rejection threshold recommended in the original paper is $\lambda = 0.22$.
@@ -176,42 +176,56 @@ The corresponding Julia function is ```relative_spindle_power(x::Vector{<:Abstra
 ### NREM Period Detection
 
 Following [Feinberg & Floyed](https://pubmed.ncbi.nlm.nih.gov/220659/) and
-Dijk, a NREM period is a succession of epochs satisfying the following two conditions:
+Dijk, a NREM period is a sequence of epochs satisfying the following two conditions:
 
 - It starts with at least 15 minutes of stages 2, 3 or 4.
-- It ends with either $a.$ at least 5 minutes of REM or $b.$ wakefulness. 
+- It ends with either $a.$ at least 5 minutes of REM or $b.$ at least 5 minutes
+  of wakefulness. 
 
-Given a succession of stages $s_1, \ldots, s_n$, with $s_i$ the sleep stage of
-the $i$th epoch, an algorithm that finds the pattern above by iterating over a
-vector is cumbersome. But one may define the alphabet $\Sigma = \\{1, 2, 3, 4,
-5, 6\\}$, where $1, \ldots, 4$ denote the homonimous sleep stages, $5$
-denotes REM and $6$ denotes wakefulness. Then the succession $s_1, \ldots, s_n$
-may be treated as a word $\alpha \in \Sigma^{*}$ of the form 
+The sequence is allowed to contain ocurrences of REM sleep or wakefulness, as
+long as their duration is inferior to 5 minutes. Naturally, the epochs
+corresponding to these ocurrences will not be signaled as NREM.
+
+Furthermore, the restriction that ending REM periods must last at least 5
+minutes is not imposed when detecting the first and the last NREM period in a
+night of sleep.
+
+Assuming that the `staging` field of the an `EEG` object has been set to a
+stage vector $\vec{s}$, and assuming that this vector contains the strings $1, \ldots, 6, ?$ (with $5$ marking REM, $6$ wakefulness, $?$ unknown/unstaged), then calling the
+
+```julia
+function nrem(eeg::EEG, n::Integer=30, m::Integer=10)
+```
+
+will find the underlying NREM periods. Here, $n$ is the minimum duration
+imposed on the NREM sequence (in epochs), and $m$ that imposed to the ending
+REM/Wake stages.
+
+The algorithm works by mapping $\vec{s}$ to $\alpha = s_1 \ldots s_q$ a word over $\\{1, 2, 3, 4, 5,6\\}^*$, and decomposing $\alpha$ into the form
 
 $$
-\alpha = \psi_1 \beta_1 \psi_2 \beta_2 \ldots \psi_k\beta_k \psi_{k+1}
+\alpha = \psi_1 \phi_1 \psi_2 \phi_2 \ldots \psi_k\phi_k \psi_{k+1}
 $$
 
-where $\psi_i$ is an arbitrary word and
+Here, $\psi_i$ is an arbitrary word and
 
 $$
-\beta_i = \varphi (5^M5^* | 6)
+\phi_i = \varphi_i (5^m5^* | 6^m6^*)
 $$
 
-with $\varphi \in \\{ w \in \\{2, 3, 4\\}^+ : |w| \geq N \\}$, $N$ the minimum
-duration imposed for NREM periods, $M$ the minimum duration imposed for ending
-REM periods. Thus, the problem of finding the $k$ underlying NREM periods 
-in a series of sleep stages becomes the problem of finding the $k$ substrings
-$\beta_1, \ldots, \beta_k$ of $\alpha$. This problem is trivial from an 
-implementation perspective, since programming languages include regular expressions 
-natively.
+with $\varphi_i \in \\{ w \in \\{1, 2, 3, 4, 6\\}^+ : \text{number of 2, 3, 4s in
+} w \geq n \\}$.
 
+Thus, the problem of finding the $k$ underlying NREM periods in a series of
+sleep stages becomes the problem of finding the $k$ substrings $\phi_1, \ldots,
+\phi_k$ of $\alpha$. This problem is trivial from an implementation
+perspective, since programming languages include regular expressions natively.
 
-Subtleties, such as not imposing a minimum duration to the ending REM period 
-of the first NREM period, can easily be adapted into the regular expression of each $\beta_i$.
+In the first and last NREM periods, we simply change $\phi_i$ to
 
-
-
+$$
+\phi_i = \varphi_i (5^+ | 6^m6^*)
+$$
 
 
 
